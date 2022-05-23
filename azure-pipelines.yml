@@ -1,19 +1,103 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
-- main
+  branches:
+    include:
+    - main
+    - feature/*
+    - bug/*
+  paths:
+    exclude:
+    - README.md
 
 pool:
-  vmImage: ubuntu-latest
+  name: sphere-linux-pool
 
+variables:
+- name: major
+  value: 1
+- name: minor
+  value: 0
+- name: patch
+  value: $(Build.BuildID)
+- name: rev
+  value: 'rev-$(git rev-parse --short HEAD)'
+
+stages:
+  - stage: 'SANDBOX'
+    displayName: 'SANDBOX'
+    jobs:
+      - job: execute_create_alert_script
+        steps:
+          - template: put_admin_template.yml
+            parameters:
+              stage: 'sandbox'
+              region: 'eu-west-1'
+              service_connection: 'AWS-Sandbox-AssumeRole-SC'
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+          - task: ManualValidation@0
+            timeoutInMinutes: 720 # task times out in 12 hours
+            inputs:
+              instructions: |
+                Please validate the rollback for $(System.StageDisplayName).
+              onTimeout: reject
+      - job: execute_create_alert_script
+        dependsOn:
+          - Rollback
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+  - stage: 'DEV'
+    displayName: 'DEV'
+    jobs:
+      - job: execute_create_admin_script
+        steps:
+          - template: put_admin_template.yml
+            parameters:
+              stage: 'dev'
+              region: 'eu-west-1'
+              service_connection: 'DEV-SRE'
+  steps:
+          - task: ManualValidation@0
+            timeoutInMinutes: 720 # task times out in 12 hours
+            inputs:
+              instructions: |
+                Please validate the rollback for $(System.StageDisplayName).
+              onTimeout: reject
+      - job: execute_create_admin_script
+        dependsOn:
+          - Rollback
+
+
+  - stage: 'STG'
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    displayName: 'STG'
+    dependsOn: DEV
+    jobs:
+      - job: execute_create_admin_script
+        steps:
+          - template: put_admin_template.yml
+            parameters:
+              stage: 'stg'
+              region: 'eu-west-1'
+              service_connection: 'STG-SRE'
+  steps:
+          - task: ManualValidation@0
+            timeoutInMinutes: 720 # task times out in 12 hours
+            inputs:
+              instructions: |
+                Please validate the rollback for $(System.StageDisplayName).
+              onTimeout: reject
+      - job: execute_create_admin_script
+        dependsOn:
+          - Rollback
+
+
+  - stage: 'PROD'
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    displayName: 'PROD'
+    dependsOn: STG
+    jobs:
+      - job: execute_create_admin_script
+        steps:
+          - template: put_admin_template.yml
+            parameters:
+              stage: 'prod'
+              region: 'eu-west-1'
+              service_connection: 'PRD-SRE'
