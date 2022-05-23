@@ -32,14 +32,15 @@ stages:
               stage: 'sandbox'
               region: 'eu-west-1'
               service_connection: 'AWS-Sandbox-AssumeRole-SC'
-steps:
-          - task: ManualValidation@0
+              
+              steps:
+                - task: ManualValidation@0
             timeoutInMinutes: 720 # task times out in 12 hours
             inputs:
               instructions: |
                 Please validate the rollback for $(System.StageDisplayName).
               onTimeout: reject
-      - job: execute_create_alert_script
+      - job: RollbackApproval
         dependsOn:
           - Rollback
 
@@ -53,14 +54,15 @@ steps:
               stage: 'dev'
               region: 'eu-west-1'
               service_connection: 'DEV-SRE'
-  steps:
-          - task: ManualValidation@0
-            timeoutInMinutes: 720 # task times out in 12 hours
-            inputs:
+              
+              steps:
+                - task: ManualValidation@0
+                  timeoutInMinutes: 720 # task times out in 12 hours
+                  inputs:
               instructions: |
                 Please validate the rollback for $(System.StageDisplayName).
               onTimeout: reject
-      - job: execute_create_admin_script
+      - job: RollbackApproval
         dependsOn:
           - Rollback
 
@@ -77,14 +79,15 @@ steps:
               stage: 'stg'
               region: 'eu-west-1'
               service_connection: 'STG-SRE'
-  steps:
-          - task: ManualValidation@0
-            timeoutInMinutes: 720 # task times out in 12 hours
-            inputs:
+              
+              steps:
+                - task: ManualValidation@0
+                  timeoutInMinutes: 720 # task times out in 12 hours
+                  inputs:
               instructions: |
                 Please validate the rollback for $(System.StageDisplayName).
               onTimeout: reject
-      - job: execute_create_admin_script
+      - job: RollbackApproval
         dependsOn:
           - Rollback
 
