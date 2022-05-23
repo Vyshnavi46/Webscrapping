@@ -35,8 +35,8 @@ stages:
               
               steps:
                 - task: ManualValidation@0
-            timeoutInMinutes: 720 # task times out in 12 hours
-            inputs:
+                  timeoutInMinutes: 720 # task times out in 12 hours
+                  inputs:
               instructions: |
                 Please validate the rollback for $(System.StageDisplayName).
               onTimeout: reject
